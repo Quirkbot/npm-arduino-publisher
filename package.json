@@ -1,0 +1,13 @@
+{
+  "name": "arduino-to-npm",
+  "dependencies": {
+    "gzipme": "0.0.9",
+    "mt-files-downloader": "^0.2.5",
+    "request": "^2.65.0",
+    "s3": "^4.4.0",
+    "seek-bzip": "^1.0.5",
+    "tar": "^2.2.1",
+    "tar-fs": "^1.8.1",
+    "unzip": "^0.1.11"
+  }
+}
