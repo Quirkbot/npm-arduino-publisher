@@ -105,7 +105,7 @@ var upload = function (src, dest, method) {
 		});
 	});
 }
-var extractTarBz2 = function (src, dest) {
+var extractTarBz2 = function (src, dest, item) {
 	return new Promise(function (resolve, reject) {
 		console.log('extractTarBz2 - start', src, dest);
 		// Uncompress
@@ -118,6 +118,10 @@ var extractTarBz2 = function (src, dest) {
 		var extractor = tar.Extract({path: __dirname + '/' + dest + '_temp/dummy', strip: 0})
 		.on('error', reject)
 		.on('end', function () {
+			if(item.toolName){
+				// Write the builtin_tools_versions.txt
+				execSync('echo "arduino.' + item.toolName + '=' + item.toolVersion + '" > ' + dest + '_temp/dummy/avr/builtin_tools_versions.txt');
+			}
 			var writeStrem = fs.createWriteStream(dest)
 			writeStrem.on('finish', function () {
 				console.log('extractTarBz2 - end', src, dest);
@@ -132,7 +136,7 @@ var extractTarBz2 = function (src, dest) {
 		.pipe(extractor);
 	});
 }
-var extractTarZip = function (src, dest) {
+var extractTarZip = function (src, dest, item) {
 	return new Promise(function (resolve, reject) {
 		console.log('extractTarZip - start', src, dest);
 		// We need a useless nested path, as node-pre-gyp will skip the first level
@@ -140,6 +144,10 @@ var extractTarZip = function (src, dest) {
 		var readStream = fs.createReadStream(src);
 		readStream.pipe(unzip.Extract({ path: dest + '_temp/dummy'}))
 		readStream.on('end', function(){
+			if(item.toolName){
+				// Write the builtin_tools_versions.txt
+				execSync('echo "arduino.' + item.toolName + '=' + item.toolVersion + '" > ' + dest + '_temp/dummy/avr/builtin_tools_versions.txt');
+			}
 			var writeStrem = fs.createWriteStream(dest)
 			writeStrem.on('finish', function () {
 				console.log('extractTarZip - end', src, dest);
@@ -205,7 +213,7 @@ var extractItem = function(item) {
 			func = extractTarZip;
 		}
 		if(func){
-			func(downloadDir + '/' + item.dest, downloadDir + '/' + item.dest  + '.tar')
+			func(downloadDir + '/' + item.dest, downloadDir + '/' + item.dest  + '.tar', item)
 			.then(function () {
 				resolve(item)
 			})
@@ -260,10 +268,14 @@ var extractToolsFromPackage = function (toolsNames) {
 					if(tool.name === toolsNames){
 						return true;
 					}
-				})
+				});
 			}
 			if(tools){
-				resolve(tools);
+				// Only the latest
+				if(tools.length){
+					resolve([tools[tools.length-1]]);
+				}
+				resolve([]);
 			}
 			else{
 				reject('Could not extract tool');
@@ -278,7 +290,7 @@ var extractFlatListFromTools = function (hostMap) {
 			var flatList = [];
 			tools.forEach(function(tool){
 				var toolName = tool.name;
-				var version = tool.version
+				var toolVersion = tool.version
 
 				Object.keys(hostMap).forEach(function(plaform){
 					Object.keys(hostMap[plaform]).forEach(function(arch){
@@ -286,7 +298,9 @@ var extractFlatListFromTools = function (hostMap) {
 						flatList.push({
 							url: token.url,
 							dest: token.archiveFileName,
-							newName: [toolName.replace(/-/g, '_'), version, plaform, arch].join('-') + '.tar.bz'
+							newName: [toolName.replace(/-/g, '_'), toolVersion, plaform, arch].join('-') + '.tar.bz',
+							toolName: toolName,
+							toolVersion: toolVersion
 						})
 					});
 				});
