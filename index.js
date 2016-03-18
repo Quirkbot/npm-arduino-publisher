@@ -45,6 +45,18 @@ switch (process.argv[2]) {
 			console.log('error', error);
 		});
 		break;
+	case 'avrdude':
+		utils.pass(packageIndexUrl)
+		.then(utils.clear)
+		.then(utils.get)
+		.then(utils.extractToolsFromPackage('avrdude'))
+		.then(utils.extractFlatListFromTools(hostMapAvrGcc))
+		.then(utils.processList)
+		.then(utils.clear)
+		.catch(function (error) {
+			console.log('error', error);
+		});
+		break;
 	case 'arduino-builder':
 		utils.pass(arduinoBuilderUrl)
 		.then(utils.clear)
@@ -59,6 +71,6 @@ switch (process.argv[2]) {
 		});
 		break;
 	default:
-		console.log('You need to specify one of the command line arguments:\n- arduino-builder\n- avr-gcc');
+		console.log('You need to specify one of the command line arguments:\n- arduino-builder\n- avr-gcc\n- avrdude');
 		break;
 }

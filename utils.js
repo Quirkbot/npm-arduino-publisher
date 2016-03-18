@@ -119,8 +119,15 @@ var extractTarBz2 = function (src, dest, item) {
 		.on('error', reject)
 		.on('end', function () {
 			if(item.toolName){
-				// Write the builtin_tools_versions.txt
-				execSync('echo "arduino.' + item.toolName + '=' + item.toolVersion + '" > ' + dest + '_temp/dummy/avr/builtin_tools_versions.txt');
+				try {
+					// Write the builtin_tools_versions.txt
+					fs.accessSync(dest + '_temp/dummy/avr', fs.F_OK);
+					execSync('echo "arduino.' + item.toolName + '=' + item.toolVersion + '" > ' + dest + '_temp/dummy/avr/builtin_tools_versions.txt');
+				} catch (e) {
+					//console.log(e)
+				}
+
+
 			}
 			var writeStrem = fs.createWriteStream(dest)
 			writeStrem.on('finish', function () {
@@ -145,8 +152,13 @@ var extractTarZip = function (src, dest, item) {
 		readStream.pipe(unzip.Extract({ path: dest + '_temp/dummy'}))
 		readStream.on('end', function(){
 			if(item.toolName){
-				// Write the builtin_tools_versions.txt
-				execSync('echo "arduino.' + item.toolName + '=' + item.toolVersion + '" > ' + dest + '_temp/dummy/avr/builtin_tools_versions.txt');
+				try {
+					// Write the builtin_tools_versions.txt
+					fs.accessSync(dest + '_temp/dummy/avr', fs.F_OK);
+					execSync('echo "arduino.' + item.toolName + '=' + item.toolVersion + '" > ' + dest + '_temp/dummy/avr/builtin_tools_versions.txt');
+				} catch (e) {
+					//console.log(e)
+				}
 			}
 			var writeStrem = fs.createWriteStream(dest)
 			writeStrem.on('finish', function () {

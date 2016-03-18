@@ -12,6 +12,10 @@ There is only one command that can accept 1 argument. This argument controls whi
 ```
 node index.js avr-gcc
 ```
+#### `avrdude`
+```
+node index.js avrdude
+```
 #### `arduino-builder`
 ```
 node index.js ardun
