@@ -18,7 +18,7 @@ node index.js avrdude
 ```
 #### `arduino-builder`
 ```
-node index.js ardun
+node index.js arduino-builder
 ```
 
 ### Environment variables

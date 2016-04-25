@@ -129,13 +129,13 @@ var extractTarBz2 = function (src, dest, item) {
 
 
 			}
-			var writeStrem = fs.createWriteStream(dest)
-			writeStrem.on('finish', function () {
+			var writeStream = fs.createWriteStream(dest)
+			writeStream.on('finish', function () {
 				console.log('extractTarBz2 - end', src, dest);
 				resolve();
 			});
-			writeStrem.on('error', reject);
-			tarFs.pack(dest + '_temp').pipe(writeStrem);
+			writeStream.on('error', reject);
+			tarFs.pack(dest + '_temp').pipe(writeStream);
 		});
 
 		fs.createReadStream(dest + '.temptar')
@@ -160,13 +160,19 @@ var extractTarZip = function (src, dest, item) {
 					//console.log(e)
 				}
 			}
-			var writeStrem = fs.createWriteStream(dest)
-			writeStrem.on('finish', function () {
+			var writeStream = fs.createWriteStream(dest)
+			// writeStream.on('finish', function () {
+			// 	console.log('extractTarZip - end', src, dest);
+			// 	resolve();
+			// });
+			setTimeout(function () {
 				console.log('extractTarZip - end', src, dest);
 				resolve();
-			});
-			writeStrem.on('error', reject);
-			tarFs.pack(dest + '_temp').pipe(writeStrem);
+			}, 10000);
+			writeStream.on('error', reject);
+			tarFs.pack(dest + '_temp').pipe(writeStream);
+
+
 		});
 		readStream.on('error', reject);
 	});
@@ -202,6 +208,9 @@ var processItem = function(item) {
 		.then(extractItem)
 		.then(compressItem)
 		.then(uploadItem)
+		.then(function () {
+			console.log('item processed ', item)
+		})
 		.then(resolve)
 		.catch(reject);
 	});
@@ -310,7 +319,7 @@ var extractFlatListFromTools = function (hostMap) {
 						flatList.push({
 							url: token.url,
 							dest: token.archiveFileName,
-							newName: [toolName.replace(/-/g, '_'), toolVersion, plaform, arch].join('-') + '.tar.bz',
+							newName: [toolName.replace(/-/g, '_'), toolVersion, plaform, arch].join('-') + '.tar.gz',
 							toolName: toolName,
 							toolVersion: toolVersion
 						})
@@ -330,7 +339,7 @@ var extractLatestTagsFromReleases = function(rawReleases) {
 				return item['tag_name'];
 			})
 			.filter(function(tag, index){
-				if(index < 3) return true;
+				if(index < 6) return true;
 			});
 			resolve(releases);
 		}
@@ -351,7 +360,7 @@ var extractFlatListFromTags = function (hostMap) {
 						flatList.push({
 							url: 'http://downloads.arduino.cc/tools/' + filename,
 							dest: filename,
-							newName: ['arduino_builder', version, plaform, arch].join('-') + '.tar.bz'
+							newName: ['arduino_builder', version, plaform, arch].join('-') + '.tar.gz'
 						})
 					});
 				});
