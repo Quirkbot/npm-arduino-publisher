@@ -206,7 +206,8 @@ var processItem = function(item) {
 	return new Promise(function (resolve, reject) {
 		downloadItem(item)
 		.then(extractItem)
-		.then(compressItem)
+		//.then(compressItem)
+		.then(copyItem)
 		.then(uploadItem)
 		.then(function () {
 			console.log('item processed ', item)
@@ -253,6 +254,22 @@ var compressItem = function(item) {
 			resolve(item)
 		})
 		.catch(reject)
+	});
+}
+var copyItem = function(item) {
+	return new Promise(function (resolve, reject) {
+		var src = downloadDir + '/' + item.dest;
+		var dest =  uploadDir + '/' + item.newName;
+		console.log('copy - start', src, dest);
+
+		var inp = fs.createReadStream(src);
+		inp.on('error', reject);
+		var out = fs.createWriteStream(dest);
+		out.on('finish', function (argument) {
+			console.log('copy - end', src, dest);
+			resolve(item);
+		});
+		inp.pipe(out);
 	});
 }
 var uploadItem = function(item) {
