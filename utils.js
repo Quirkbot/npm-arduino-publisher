@@ -1,5 +1,6 @@
 var path = require('path');
 var fs = require('fs');
+var rimraf = require('rimraf');
 var fstream = require("fstream")
 var request = require('request');
 var Downloader = require('mt-files-downloader');
@@ -28,6 +29,7 @@ var pass = function () {
 	});
 }
 var get = function(url) {
+	console.log(url)
 	return new Promise(function (resolve, reject) {
 		request({
 				url :url,
@@ -117,14 +119,20 @@ var extractTarBz2 = function (src, dest, item) {
 
 		// Untar
 		// We need a useless nested path, as node-pre-gyp will skip the first level
-		var extractor = tar.Extract({path: __dirname + '/' + dest + '_temp/dummy', strip: 0})
+		var extractor = tar.Extract({
+			path: path.resolve(__dirname, dest + '_temp', 'dummy'),
+			strip: 0
+		})
 		.on('error', reject)
 		.on('end', function () {
 			if(item.toolName){
 				try {
 					// Write the builtin_tools_versions.txt
-					fs.accessSync(dest + '_temp/dummy/avr', fs.F_OK);
-					execSync('echo "arduino.' + item.toolName + '=' + item.toolVersion + '" > ' + dest + '_temp/dummy/avr/builtin_tools_versions.txt');
+					fs.accessSync(path.resolve(dest + '_temp','dummy','avr'), fs.F_OK);
+					fs.writeFileSync(
+						path.resolve(dest + '_temp','dummy','avr','builtin_tools_versions.txt'),
+						'arduino.' + item.toolName + '=' + item.toolVersion
+					)
 				} catch (e) {
 					//console.log(e)
 				}
@@ -150,15 +158,18 @@ var extractTarZip = function (src, dest, item) {
 	return new Promise(function (resolve, reject) {
 		console.log('extractTarZip - start', src, dest);
 		// We need a useless nested path, as node-pre-gyp will skip the first level
-		var tempDest = dest + '_temp/dummy';
+		var tempDest = path.resolve(dest + '_temp','dummy');
 		var readStream = fs.createReadStream(src);
-		readStream.pipe(unzip.Extract({ path: dest + '_temp/dummy'}))
+		readStream.pipe(unzip.Extract({ path: path.resolve(dest + '_temp','dummy')}))
 		readStream.on('end', function(){
 			if(item.toolName){
 				try {
 					// Write the builtin_tools_versions.txt
-					fs.accessSync(dest + '_temp/dummy/avr', fs.F_OK);
-					execSync('echo "arduino.' + item.toolName + '=' + item.toolVersion + '" > ' + dest + '_temp/dummy/avr/builtin_tools_versions.txt');
+					fs.accessSync(path.resolve(dest + '_temp','dummy','avr'), fs.F_OK);
+					fs.writeFileSync(
+						path.resolve(dest + '_temp','dummy','avr','builtin_tools_versions.txt'),
+						'arduino.' + item.toolName + '=' + item.toolVersion
+					)
 				} catch (e) {
 					//console.log(e)
 				}
@@ -196,14 +207,53 @@ var gzip = function (src, dest) {
 		inp.pipe(gzip).pipe(out);
 	});
 }
+var mkdir = function(path){
 
+	return function(){
+		var payload = arguments;
+		var promise = function(resolve, reject){
+			fs.mkdir(path, function(error) {
+				if (error) {
+					reject(error)
+					return
+				}
+				resolve.apply(null, payload)
+			})
+		}
+		return new Promise(promise)
+	}
+}
+var deleteDir = function(path){
+
+	return function(){
+		var payload = arguments;
+		var promise = function(resolve, reject){
+			rimraf(path, function(error) {
+				if (error) {
+					reject(error)
+					return
+				}
+				resolve.apply(null, payload)
+			})
+		}
+		return new Promise(promise)
+	}
+}
 var clear = function () {
 	var payload = arguments;
-	return new Promise(function (resolve, reject) {
-		execSync('rm -r ' + downloadDir + '; mkdir ' + downloadDir);
-		execSync('rm -r ' + uploadDir + '; mkdir ' + uploadDir);
-		resolve.apply(this, payload);
-	});
+	var promise = function(resolve, reject){
+		pass()
+		.then(deleteDir(downloadDir))
+		.then(deleteDir(uploadDir))
+		.then(mkdir(downloadDir))
+		.then(mkdir(uploadDir))
+		.then(function() {
+			resolve.apply(null, payload)
+		})
+	}
+	return new Promise(promise)
+
+
 }
 
 var processItem = function(item) {
@@ -222,7 +272,7 @@ var processItem = function(item) {
 }
 var downloadItem = function(item) {
 	return new Promise(function (resolve, reject) {
-		download(item.url, downloadDir + '/' + item.dest)
+		download(item.url, path.resolve(downloadDir , item.dest))
 		.then(function () {
 			resolve(item)
 		})
@@ -239,7 +289,11 @@ var extractItem = function(item) {
 			func = extractTarZip;
 		}
 		if(func){
-			func(downloadDir + '/' + item.dest, downloadDir + '/' + item.dest  + '.tar', item)
+			func(
+				path.resolve(downloadDir, item.dest),
+				path.resolve(downloadDir, item.dest  + '.tar'),
+				item
+			)
 			.then(function () {
 				resolve(item)
 			})
@@ -254,7 +308,10 @@ var extractItem = function(item) {
 var compressItem = function(item) {
 	return new Promise(function (resolve, reject) {
 		//gzip(downloadDir + '/' + item.dest  + '.tar', uploadDir + '/' + item.newName)
-		targz().compress(downloadDir + '/' + item.dest  + '.tar_temp', uploadDir + '/' + item.newName)
+		targz().compress(
+			path.resolve(downloadDir, item.dest  + '.tar_temp'),
+			path.resolve(uploadDir, item.newName)
+		)
 		.then(function () {
 			resolve(item)
 		})
@@ -263,8 +320,8 @@ var compressItem = function(item) {
 }
 var copyItem = function(item) {
 	return new Promise(function (resolve, reject) {
-		var src = downloadDir + '/' + item.dest;
-		var dest =  uploadDir + '/' + item.newName;
+		var src = path.resolve(downloadDir, item.dest);
+		var dest =  path.resolve(uploadDir, item.newName);
 		console.log('copy - start', src, dest);
 
 		var inp = fs.createReadStream(src);
@@ -279,7 +336,7 @@ var copyItem = function(item) {
 }
 var uploadItem = function(item) {
 	return new Promise(function (resolve, reject) {
-		upload(uploadDir + '/' + item.newName, item.newName)
+		upload(path.resolve(uploadDir,item.newName), item.newName)
 		.then(function () {
 			resolve(item)
 		})
