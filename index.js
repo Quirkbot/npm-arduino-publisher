@@ -40,7 +40,7 @@ switch (process.argv[2]) {
 		.then(utils.extractToolsFromPackage('avr-gcc'))
 		.then(utils.extractFlatListFromTools(hostMapAvrGcc))
 		.then(utils.processList)
-		.then(utils.clear)
+		//.then(utils.clear)
 		.catch(function (error) {
 			console.log('error', error);
 		});
@@ -52,7 +52,7 @@ switch (process.argv[2]) {
 		.then(utils.extractToolsFromPackage('avrdude'))
 		.then(utils.extractFlatListFromTools(hostMapAvrGcc))
 		.then(utils.processList)
-		.then(utils.clear)
+		//.then(utils.clear)
 		.catch(function (error) {
 			console.log('error', error);
 		});
@@ -64,8 +64,7 @@ switch (process.argv[2]) {
 		.then(utils.extractLatestTagsFromReleases)
 		.then(utils.extractFlatListFromTags(hostMapArduinoBuilder))
 		.then(utils.processList)
-		.then(utils.clear)
-
+		//.then(utils.clear)
 		.catch(function (error) {
 			console.log('error', error);
 		});

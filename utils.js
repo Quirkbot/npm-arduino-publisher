@@ -19,6 +19,7 @@ var s3Client = s3.createClient({
 });
 var downloadDir = '.downloads';
 var uploadDir = '.uploads';
+var targz = require('tar.gz');
 
 var pass = function () {
 	var payload = arguments;
@@ -89,7 +90,8 @@ var upload = function (src, dest, method) {
 			localFile: src,
 			s3Params: {
 				Bucket: process.env.S3_BUCKET,
-				Key: dest
+				Key: dest,
+				ContentType: 'application/x-gzip'
 			}
 		};
 		var uploader = s3Client.uploadFile(params);
@@ -129,13 +131,14 @@ var extractTarBz2 = function (src, dest, item) {
 
 
 			}
-			var writeStream = fs.createWriteStream(dest)
+			resolve();
+			/*var writeStream = fs.createWriteStream(dest)
 			writeStream.on('finish', function () {
 				console.log('extractTarBz2 - end', src, dest);
 				resolve();
 			});
 			writeStream.on('error', reject);
-			tarFs.pack(dest + '_temp').pipe(writeStream);
+			tarFs.pack(dest + '_temp').pipe(writeStream);*/
 		});
 
 		fs.createReadStream(dest + '.temptar')
@@ -160,7 +163,8 @@ var extractTarZip = function (src, dest, item) {
 					//console.log(e)
 				}
 			}
-			var writeStream = fs.createWriteStream(dest)
+			resolve();
+			/*var writeStream = fs.createWriteStream(dest)
 			// writeStream.on('finish', function () {
 			// 	console.log('extractTarZip - end', src, dest);
 			// 	resolve();
@@ -170,7 +174,7 @@ var extractTarZip = function (src, dest, item) {
 				resolve();
 			}, 10000);
 			writeStream.on('error', reject);
-			tarFs.pack(dest + '_temp').pipe(writeStream);
+			tarFs.pack(dest + '_temp').pipe(writeStream);*/
 
 
 		});
@@ -206,7 +210,7 @@ var processItem = function(item) {
 	return new Promise(function (resolve, reject) {
 		downloadItem(item)
 		.then(extractItem)
-		//.then(compressItem)
+		.then(compressItem)
 		.then(copyItem)
 		.then(uploadItem)
 		.then(function () {
@@ -249,7 +253,8 @@ var extractItem = function(item) {
 }
 var compressItem = function(item) {
 	return new Promise(function (resolve, reject) {
-		gzip(downloadDir + '/' + item.dest  + '.tar', uploadDir + '/' + item.newName)
+		//gzip(downloadDir + '/' + item.dest  + '.tar', uploadDir + '/' + item.newName)
+		targz().compress(downloadDir + '/' + item.dest  + '.tar_temp', uploadDir + '/' + item.newName)
 		.then(function () {
 			resolve(item)
 		})
@@ -309,11 +314,12 @@ var extractToolsFromPackage = function (toolsNames) {
 				});
 			}
 			if(tools){
+				resolve(tools);
 				// Only the latest
-				if(tools.length){
+				/*if(tools.length){
 					resolve([tools[tools.length-1]]);
 				}
-				resolve([]);
+				resolve([]);*/
 			}
 			else{
 				reject('Could not extract tool');
@@ -355,9 +361,9 @@ var extractLatestTagsFromReleases = function(rawReleases) {
 			.map(function(item){
 				return item['tag_name'];
 			})
-			.filter(function(tag, index){
-				if(index < 6) return true;
-			});
+			/*.filter(function(tag, index){
+				if(index < 1) return true;
+			});*/
 			resolve(releases);
 		}
 		catch (e){
