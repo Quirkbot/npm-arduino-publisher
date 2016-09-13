@@ -10,6 +10,8 @@ install:
 
 build_script:
   - cmd: node index.js avrdude
+  - cmd: node index.js arduino-builder
+  - cmd: node index.js avr-gcc
 
 test_script:
   - node --version
