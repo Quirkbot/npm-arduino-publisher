@@ -139,14 +139,14 @@ var extractTarBz2 = function (src, dest, item) {
 
 
 			}
-			resolve();
-			/*var writeStream = fs.createWriteStream(dest)
+			//resolve();
+			var writeStream = fs.createWriteStream(dest)
 			writeStream.on('finish', function () {
 				console.log('extractTarBz2 - end', src, dest);
 				resolve();
 			});
 			writeStream.on('error', reject);
-			tarFs.pack(dest + '_temp').pipe(writeStream);*/
+			tarFs.pack(dest + '_temp').pipe(writeStream);
 		});
 
 		fs.createReadStream(dest + '.temptar')
@@ -174,8 +174,8 @@ var extractTarZip = function (src, dest, item) {
 					//console.log(e)
 				}
 			}
-			resolve();
-			/*var writeStream = fs.createWriteStream(dest)
+			//resolve();
+			var writeStream = fs.createWriteStream(dest)
 			// writeStream.on('finish', function () {
 			// 	console.log('extractTarZip - end', src, dest);
 			// 	resolve();
@@ -185,7 +185,7 @@ var extractTarZip = function (src, dest, item) {
 				resolve();
 			}, 10000);
 			writeStream.on('error', reject);
-			tarFs.pack(dest + '_temp').pipe(writeStream);*/
+			tarFs.pack(dest + '_temp').pipe(writeStream);
 
 
 		});
@@ -307,11 +307,14 @@ var extractItem = function(item) {
 }
 var compressItem = function(item) {
 	return new Promise(function (resolve, reject) {
-		//gzip(downloadDir + '/' + item.dest  + '.tar', uploadDir + '/' + item.newName)
-		targz().compress(
-			path.resolve(downloadDir, item.dest  + '.tar_temp'),
+		gzip(
+			path.resolve(downloadDir, item.dest  + '.tar'),
 			path.resolve(uploadDir, item.newName)
 		)
+		/*targz().compress(
+			path.resolve(downloadDir, item.dest  + '.tar_temp'),
+			path.resolve(uploadDir, item.newName)
+		)*/
 		.then(function () {
 			resolve(item)
 		})
