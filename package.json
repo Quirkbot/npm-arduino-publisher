@@ -5,7 +5,7 @@
     "mt-files-downloader": "^0.2.5",
     "ncp": "2.0.0",
     "request": "^2.65.0",
-    "rimraf": "2.4.4",
+    "rimraf": "^2.4.4",
     "s3": "^4.4.0",
     "seek-bzip": "^1.0.5",
     "tar": "^2.2.1",
