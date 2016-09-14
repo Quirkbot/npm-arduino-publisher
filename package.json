@@ -3,14 +3,18 @@
   "dependencies": {
     "gzipme": "0.0.9",
     "mt-files-downloader": "^0.2.5",
+    "ncp": "2.0.0",
     "request": "^2.65.0",
+    "rimraf": "2.4.4",
     "s3": "^4.4.0",
     "seek-bzip": "^1.0.5",
     "tar": "^2.2.1",
-    "tar-fs": "^1.8.1",
-    "tar.gz": "^1.0.5",
-    "unzip": "^0.1.11",
-    "ncp": "2.0.0",
-    "rimraf": "2.4.4"
+    "tar-pack": "^3.1.4"
+  },
+  "devDependencies": {
+    "eslint": "^3.4.0",
+    "eslint-config-standard": "^6.0.0",
+    "eslint-plugin-promise": "^2.0.1",
+    "eslint-plugin-standard": "^2.0.0"
   }
 }
