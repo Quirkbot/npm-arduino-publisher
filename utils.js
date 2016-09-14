@@ -150,7 +150,6 @@ var extractTarBz2 = function (src, dest, item) {
 			writeStream.on('error', reject)
 			tarFs.pack(dest + '_temp').pipe(writeStream)*/
 		})
-
 		fs.createReadStream(dest + '.temptar')
 		.on('error', reject)
 		.pipe(extractor)
@@ -188,7 +187,6 @@ var extractTarZip = function (src, dest, item) {
 			}, 10000)
 			writeStream.on('error', reject)
 			tarFs.pack(dest + '_temp').pipe(writeStream)*/
-
 
 		})
 		readStream.on('error', reject)
