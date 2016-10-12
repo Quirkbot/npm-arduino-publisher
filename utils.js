@@ -309,6 +309,9 @@ var compressItem = function(item) {
 	return new Promise(function (resolve, reject) {
 		console.log('compressItem - start', item.newName)
 
+		let handler = () => resolve(item)
+		process.addListener('uncaughtException', handler)
+
 		var writeStream = fs.createWriteStream(path.resolve(uploadDir, item.newName))
 		writeStream.on('error', function (error) {
 			console.log('compress error')
@@ -319,10 +322,12 @@ var compressItem = function(item) {
 		.pipe(writeStream)
 		.on('error', function (error) {
 			console.log('compress error')
+			process.removeListener('uncaughtException', handler)
 			reject(error)
 		})
 		.on('close', function () {
 			console.log('compressItem - end', item.newName)
+			process.removeListener('uncaughtException', handler)
 			resolve(item)
 		})
 		/*gzip(
