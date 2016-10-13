@@ -362,7 +362,7 @@ var copyItem = function(item) {
 }
 var uploadItem = function(item) {
 	return new Promise(function (resolve, reject) {
-		upload(path.resolve(uploadDir,item.newName), item.newName)
+		upload(path.resolve(uploadDir,item.newName), item.basename +'/' + item.newName)
 		.then(function () {
 			resolve(item)
 		})
@@ -425,6 +425,7 @@ var extractFlatListFromTools = function (hostMap) {
 						flatList.push({
 							url: token.url,
 							dest: token.archiveFileName,
+							basename: toolName.replace(/-/g, '_'),
 							newName: [toolName.replace(/-/g, '_'), toolVersion, plaform, arch].join('-') + '.tar.gz',
 							toolName: toolName,
 							toolVersion: toolVersion
@@ -466,6 +467,7 @@ var extractFlatListFromTags = function (hostMap) {
 						flatList.push({
 							url: 'http://downloads.arduino.cc/tools/' + filename,
 							dest: filename,
+							basename: 'arduino_builder',
 							newName: ['arduino_builder', version, plaform, arch].join('-') + '.tar.gz'
 						})
 					})
