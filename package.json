@@ -1,15 +1,13 @@
 {
   "name": "arduino-to-npm",
   "dependencies": {
-    "gzipme": "0.0.9",
     "mt-files-downloader": "^0.2.5",
-    "ncp": "2.0.0",
+    "node-pre-gyp": "^0.6.30",
     "request": "^2.65.0",
     "rimraf": "^2.4.4",
     "s3": "^4.4.0",
     "seek-bzip": "^1.0.5",
     "tar": "^2.2.1",
-    "tar-pack": "^3.1.4",
     "unzip": "^0.1.11"
   },
   "devDependencies": {

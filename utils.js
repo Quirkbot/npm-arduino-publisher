@@ -4,12 +4,9 @@ var rimraf = require('rimraf')
 var request = require('request')
 var Downloader = require('mt-files-downloader')
 var Bunzip = require('seek-bzip')
-var pack = require('tar-pack').pack
-
-//var tarFs = require('tar-fs')
 var tar = require('tar')
 var unzip = require('unzip')
-//var zlib = require('zlib')
+
 var s3 = require('s3')
 var downloader = new Downloader()
 var s3Client = s3.createClient({
@@ -20,6 +17,8 @@ var s3Client = s3.createClient({
 })
 var downloadDir = '.downloads'
 var uploadDir = '.uploads'
+
+const TEMP_TOKEN = 'tmp'
 
 var pass = function () {
 	var payload = arguments
@@ -121,7 +120,7 @@ var extractTarBz2 = function (src, dest, item) {
 		// Untar
 		// We need a useless nested path, as node-pre-gyp will skip the first level
 		var extractor = tar.Extract({
-			path: path.resolve(__dirname, dest + '_temp', 'dummy'),
+			path: path.resolve(__dirname, dest + TEMP_TOKEN, 'dummy'),
 			strip: 0
 		})
 		.on('error', reject)
@@ -129,9 +128,9 @@ var extractTarBz2 = function (src, dest, item) {
 			if(item.toolName){
 				try {
 					// Write the builtin_tools_versions.txt
-					fs.accessSync(path.resolve(dest + '_temp','dummy','avr'), fs.F_OK)
+					fs.accessSync(path.resolve(dest + TEMP_TOKEN,'dummy','avr'), fs.F_OK)
 					fs.writeFileSync(
-						path.resolve(dest + '_temp','dummy','avr','builtin_tools_versions.txt'),
+						path.resolve(dest + TEMP_TOKEN,'dummy','avr','builtin_tools_versions.txt'),
 						'arduino.' + item.toolName + '=' + item.toolVersion
 					)
 				} catch (e) {
@@ -148,7 +147,7 @@ var extractTarBz2 = function (src, dest, item) {
 				resolve()
 			})
 			writeStream.on('error', reject)
-			tarFs.pack(dest + '_temp').pipe(writeStream)*/
+			tarFs.pack(dest + TEMP_TOKEN).pipe(writeStream)*/
 		})
 		fs.createReadStream(dest + '.temptar')
 		.on('error', reject)
@@ -160,14 +159,14 @@ var extractTarZip = function (src, dest, item) {
 		console.log('extractTarZip - start', src, dest)
 		// We need a useless nested path, as node-pre-gyp will skip the first level
 		var readStream = fs.createReadStream(src)
-		readStream.pipe(unzip.Extract({ path: path.resolve(dest + '_temp','dummy')}))
+		readStream.pipe(unzip.Extract({ path: path.resolve(dest + TEMP_TOKEN,'dummy')}))
 		readStream.on('end', function(){
 			if(item.toolName){
 				try {
 					// Write the builtin_tools_versions.txt
-					fs.accessSync(path.resolve(dest + '_temp','dummy','avr'), fs.F_OK)
+					fs.accessSync(path.resolve(dest + TEMP_TOKEN,'dummy','avr'), fs.F_OK)
 					fs.writeFileSync(
-						path.resolve(dest + '_temp','dummy','avr','builtin_tools_versions.txt'),
+						path.resolve(dest + TEMP_TOKEN,'dummy','avr','builtin_tools_versions.txt'),
 						'arduino.' + item.toolName + '=' + item.toolVersion
 					)
 				} catch (e) {
@@ -186,7 +185,7 @@ var extractTarZip = function (src, dest, item) {
 				resolve()
 			}, 10000)
 			writeStream.on('error', reject)
-			tarFs.pack(dest + '_temp').pipe(writeStream)*/
+			tarFs.pack(dest + TEMP_TOKEN).pipe(writeStream)*/
 
 		})
 		readStream.on('error', reject)
@@ -306,42 +305,57 @@ var extractItem = function(item) {
 	})
 }
 var compressItem = function(item) {
-	return new Promise(function (resolve, reject) {
+	return new Promise(function (resolve) {
 		console.log('compressItem - start', item.newName)
 
-		let handler = () => resolve(item)
-		process.addListener('uncaughtException', handler)
+		const execSync = require('child_process').execSync
 
-		var writeStream = fs.createWriteStream(path.resolve(uploadDir, item.newName))
-		writeStream.on('error', function (error) {
-			console.log('compress error')
-			reject(error)
-		})
+		// Use node-pre-gyp to package (this is a huuuge hack)
 
-		pack(path.resolve(downloadDir, item.dest  + '.tar_temp'))
-		.pipe(writeStream)
-		.on('error', function (error) {
-			console.log('compress error')
-			process.removeListener('uncaughtException', handler)
-			reject(error)
-		})
-		.on('close', function () {
-			console.log('compressItem - end', item.newName)
-			process.removeListener('uncaughtException', handler)
-			resolve(item)
-		})
-		/*gzip(
-			path.resolve(downloadDir, item.dest  + '.tar'),
+		// Create nescessary dummy files
+		fs.writeFileSync(
+			path.resolve(
+				downloadDir,
+				item.dest  + '.tar'+TEMP_TOKEN,
+				'dummy',
+				'dummy.node'
+			)
+		)
+		fs.writeFileSync(
+			path.resolve(
+				downloadDir,
+				item.dest  + '.tar'+TEMP_TOKEN,
+				'package.json'
+			),
+			JSON.stringify({
+				name: 'dummy',
+				version: '0.0.0',
+				main: 'dummy',
+				binary: {
+					module_name: 'dummy',
+					module_path: './dummy/',
+					package_name: 'module.tar.gz',
+					host: 'https://dummy'
+				}
+			}, null, '\t')
+		)
+		// Run package command
+		execSync(
+			path.resolve('node_modules','.bin', 'node-pre-gyp') + ' package',
+			{
+				cwd: path.resolve(downloadDir, item.dest  + '.tar'+TEMP_TOKEN),
+				stdio: 'ignore'
+			}
+		)
+
+		// Move file
+		fs.renameSync(
+			path.resolve(downloadDir, item.dest  + '.tar'+TEMP_TOKEN, 'build', 'stage', 'module.tar.gz'),
 			path.resolve(uploadDir, item.newName)
-		)*/
-		/*targz().compress(
-			path.resolve(downloadDir, item.dest  + '.tar_temp'),
-			path.resolve(uploadDir, item.newName)
-		)*/
-		/*.then(function () {
-			resolve(item)
-		})
-		.catch(reject)*/
+		)
+
+		console.log('compressItem - end', item.newName)
+		resolve(item)
 	})
 }
 var copyItem = function(item) {
