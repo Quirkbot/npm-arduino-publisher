@@ -3,4 +3,5 @@ node_modules
 npm-debug.log
 .uploads
 .downloads
+/dist
 s3Options.js

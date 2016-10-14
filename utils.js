@@ -1,24 +1,15 @@
 var path = require('path')
-var fs = require('fs')
-var rimraf = require('rimraf')
+var fs = require('fs-extra')
 var request = require('request')
 var Downloader = require('mt-files-downloader')
 var Bunzip = require('seek-bzip')
 var tar = require('tar')
 var unzip = require('unzip')
-
-var s3 = require('s3')
 var downloader = new Downloader()
-var s3Client = s3.createClient({
-	s3Options: {
-		accessKeyId: process.env.S3_ACCESS_KEY_ID,
-		secretAccessKey: process.env.S3_SECRET_ACCESS_KEY
-	}
-})
-var downloadDir = '.downloads'
-var uploadDir = '.uploads'
 
-const TEMP_TOKEN = 'tmp'
+const LIMIT = process.argv[3] || 1
+const TEMP = path.resolve('.downloads')
+const DIST = path.resolve('dist')
 
 var pass = function () {
 	var payload = arguments
@@ -46,10 +37,10 @@ var get = function(url) {
 		)
 	})
 }
-var download = function (url, dest, port, method) {
+var download = function (url, dst, port, method) {
 	return new Promise(function (resolve, reject) {
 
-		var dl = downloader.download(url, dest)
+		var dl = downloader.download(url, dst)
 		dl.setRetryOptions({
 			maxRetries: 3,		// Default: 5
 			retryInterval: 1000 // Default: 2000
@@ -66,61 +57,37 @@ var download = function (url, dest, port, method) {
 
 		// Called when the download will start
 		dl.on('start', function() {
-			console.log('download - start - ' + url + ' >> ' + dest)
+			// console.log('download - start - ' + url + ' >> ' + dst)
 		})
 
 		// Called in case of error
 		dl.on('error', function() {
-			console.log('download - error - ' + url + ' >> ' + dest)
-			console.log(dl.error)
+			// console.log('download - error - ' + url + ' >> ' + dst)
+			// console.log(dl.error)
 			reject(dl.error)
 		})
 
 		// Called when the download is finished
 		dl.on('end', function() {
-			console.log('download - end - ' + url + ' >> ' + dest)
-			resolve(dest)
+			// console.log('download - end - ' + url + ' >> ' + dst)
+			resolve(dst)
 		})
 
 		// Start the download
 		dl.start()
 	})
 }
-var upload = function (src, dest) {
+var extractTarBz2 = function (src, dst, item) {
 	return new Promise(function (resolve, reject) {
-		var params = {
-			localFile: src,
-			s3Params: {
-				Bucket: process.env.S3_BUCKET,
-				Key: dest,
-				ContentType: 'application/x-gzip'
-			}
-		}
-		var uploader = s3Client.uploadFile(params)
-		console.log('upload - start - ' + src)
-		uploader.on('error', function(err) {
-			console.log('upload - error - ' + src)
-			reject(err)
-		})
-
-		uploader.on('end', function() {
-			console.log('upload - end - ' + src)
-			resolve()
-		})
-	})
-}
-var extractTarBz2 = function (src, dest, item) {
-	return new Promise(function (resolve, reject) {
-		console.log('extractTarBz2 - start', src, dest)
+		// console.log('extractTarBz2 - start', src, dst)
 		// Uncompress
 		var compressedData = fs.readFileSync(src)
 		var data = Bunzip.decode(compressedData)
-		fs.writeFileSync(dest + '.temptar', data)
+		fs.writeFileSync(`${src}.temp.tar`, data)
 
 		// Untar
-		// We need a useless nested path, as node-pre-gyp will skip the first level
 		var extractor = tar.Extract({
-			path: path.resolve(__dirname, dest + TEMP_TOKEN, 'dummy'),
+			path: path.resolve(dst, 'tools'),
 			strip: 0
 		})
 		.on('error', reject)
@@ -128,84 +95,47 @@ var extractTarBz2 = function (src, dest, item) {
 			if(item.toolName){
 				try {
 					// Write the builtin_tools_versions.txt
-					fs.accessSync(path.resolve(dest + TEMP_TOKEN,'dummy','avr'), fs.F_OK)
+					fs.accessSync(path.resolve(dst, 'tools', 'avr'), fs.F_OK)
 					fs.writeFileSync(
-						path.resolve(dest + TEMP_TOKEN,'dummy','avr','builtin_tools_versions.txt'),
-						'arduino.' + item.toolName + '=' + item.toolVersion
+						path.resolve(dst, 'tools', 'avr', 'builtin_tools_versions.txt'),
+						`arduino.${item.toolName}=${item.toolVersion}`
 					)
-				} catch (e) {
-					//console.log(e)
-				}
+				} catch (e) {/**/}
 
 
 			}
-			console.log('extractTarBz2 - end', src, dest)
+			// console.log('extractTarBz2 - end', src, dst)
 			resolve()
-			/*var writeStream = fs.createWriteStream(dest)
-			writeStream.on('finish', function () {
-				console.log('extractTarBz2 - end', src, dest)
-				resolve()
-			})
-			writeStream.on('error', reject)
-			tarFs.pack(dest + TEMP_TOKEN).pipe(writeStream)*/
 		})
-		fs.createReadStream(dest + '.temptar')
+		fs.createReadStream(`${src}.temp.tar`)
 		.on('error', reject)
 		.pipe(extractor)
 	})
 }
-var extractTarZip = function (src, dest, item) {
+var extractTarZip = function (src, dst, item) {
 	return new Promise(function (resolve, reject) {
-		console.log('extractTarZip - start', src, dest)
+		// console.log('extractTarZip - start', src, dst)
 		// We need a useless nested path, as node-pre-gyp will skip the first level
 		var readStream = fs.createReadStream(src)
-		readStream.pipe(unzip.Extract({ path: path.resolve(dest + TEMP_TOKEN,'dummy')}))
+		readStream.pipe(unzip.Extract({ path: path.resolve(dst, 'tools')}))
 		readStream.on('end', function(){
 			if(item.toolName){
 				try {
 					// Write the builtin_tools_versions.txt
-					fs.accessSync(path.resolve(dest + TEMP_TOKEN,'dummy','avr'), fs.F_OK)
+					fs.accessSync(path.resolve(dst, 'tools', 'avr'), fs.F_OK)
 					fs.writeFileSync(
-						path.resolve(dest + TEMP_TOKEN,'dummy','avr','builtin_tools_versions.txt'),
-						'arduino.' + item.toolName + '=' + item.toolVersion
+						path.resolve(dst, 'tools', 'avr', 'builtin_tools_versions.txt'),
+						`arduino.${item.toolName}=${item.toolVersion}`
 					)
-				} catch (e) {
-					//console.log(e)
-				}
+				} catch (e) {/**/}
 			}
-			console.log('extractTarZip - end', src, dest)
+			// console.log('extractTarZip - end', src, dst)
 			resolve()
-			/*var writeStream = fs.createWriteStream(dest)
-			// writeStream.on('finish', function () {
-			// 	console.log('extractTarZip - end', src, dest)
-			// 	resolve()
-			// })
-			setTimeout(function () {
-				console.log('extractTarZip - end', src, dest)
-				resolve()
-			}, 10000)
-			writeStream.on('error', reject)
-			tarFs.pack(dest + TEMP_TOKEN).pipe(writeStream)*/
 
 		})
 		readStream.on('error', reject)
 	})
 }
-/*var gzip = function (src, dest) {
-	return new Promise(function (resolve, reject) {
-		console.log('gzip - start', src, dest);
-		var gzip = zlib.createGzip();
-		var inp = fs.createReadStream(src);
-		inp.on('error', reject);
-		var out = fs.createWriteStream(dest);
-		out.on('finish', function (argument) {
-			console.log('gzip - end', src, dest);
-			resolve();
-		});
-		out.on('error', reject);
-		inp.pipe(gzip).pipe(out);
-	});
-}*/
 var mkdir = function(path){
 
 	return function(){
@@ -223,11 +153,10 @@ var mkdir = function(path){
 	}
 }
 var deleteDir = function(path){
-
 	return function(){
 		var payload = arguments
 		var promise = function(resolve, reject){
-			rimraf(path, function(error) {
+			fs.remove(path, function(error) {
 				if (error) {
 					reject(error)
 					return
@@ -238,40 +167,56 @@ var deleteDir = function(path){
 		return new Promise(promise)
 	}
 }
-var clear = function () {
+var clearAll = function () {
 	var payload = arguments
 	var promise = function(resolve){
 		pass()
-		.then(deleteDir(downloadDir))
-		.then(deleteDir(uploadDir))
-		.then(mkdir(downloadDir))
-		.then(mkdir(uploadDir))
+		.then(deleteDir(TEMP))
+		.then(deleteDir(DIST))
+		.then(mkdir(TEMP))
+		.then(mkdir(DIST))
 		.then(function() {
 			resolve.apply(null, payload)
 		})
 	}
 	return new Promise(promise)
+}
 
-
+var clear = function () {
+	var payload = arguments
+	var promise = function(resolve){
+		pass()
+		.then(deleteDir(TEMP))
+		.then(function() {
+			resolve.apply(null, payload)
+		})
+	}
+	return new Promise(promise)
 }
 
 var processItem = function(item) {
-	return new Promise(function (resolve, reject) {
-		downloadItem(item)
+	return new Promise(function (resolve) {
+		pass(item)
+		.then(item => {
+			console.log('START:', item.newName)
+			return item
+		})
+		.then(downloadItem)
 		.then(extractItem)
-		.then(compressItem)
-		.then(copyItem)
-		.then(uploadItem)
-		.then(function () {
-			console.log('item processed ', item)
+		.then(item => {
+			console.log('SUCCESS:', item.newName)
+			return item
 		})
 		.then(resolve)
-		.catch(reject)
+		.catch(error => {
+			console.log('ERROR:', item.newName, error)
+			return item
+		})
 	})
 }
 var downloadItem = function(item) {
 	return new Promise(function (resolve, reject) {
-		download(item.url, path.resolve(downloadDir , item.dest))
+		download(item.url, path.join(TEMP , item.dst))
 		.then(function () {
 			resolve(item)
 		})
@@ -281,16 +226,16 @@ var downloadItem = function(item) {
 var extractItem = function(item) {
 	return new Promise(function (resolve, reject) {
 		var func
-		if(item.dest.indexOf('.tar.bz2') !== -1){
+		if(item.dst.indexOf('.tar.bz2') !== -1){
 			func = extractTarBz2
 		}
-		else if (item.dest.indexOf('.zip') !== -1){
+		else if (item.dst.indexOf('.zip') !== -1){
 			func = extractTarZip
 		}
 		if(func){
 			func(
-				path.resolve(downloadDir, item.dest),
-				path.resolve(downloadDir, item.dest  + '.tar'),
+				path.join(TEMP, item.dst),
+				path.join(DIST, item.newName),
 				item
 			)
 			.then(function () {
@@ -304,85 +249,7 @@ var extractItem = function(item) {
 
 	})
 }
-var compressItem = function(item) {
-	return new Promise(function (resolve) {
-		console.log('compressItem - start', item.newName)
 
-		const execSync = require('child_process').execSync
-
-		// Use node-pre-gyp to package (this is a huuuge hack)
-
-		// Create nescessary dummy files
-		fs.writeFileSync(
-			path.resolve(
-				downloadDir,
-				item.dest  + '.tar'+TEMP_TOKEN,
-				'dummy',
-				'dummy.node'
-			)
-		)
-		fs.writeFileSync(
-			path.resolve(
-				downloadDir,
-				item.dest  + '.tar'+TEMP_TOKEN,
-				'package.json'
-			),
-			JSON.stringify({
-				name: 'dummy',
-				version: '0.0.0',
-				main: 'dummy',
-				binary: {
-					module_name: 'dummy',
-					module_path: './dummy/',
-					package_name: 'module.tar.gz',
-					host: 'https://dummy'
-				}
-			}, null, '\t')
-		)
-		// Run package command
-		execSync(
-			path.resolve('node_modules','.bin', 'node-pre-gyp') + ' package',
-			{
-				cwd: path.resolve(downloadDir, item.dest  + '.tar'+TEMP_TOKEN),
-				stdio: 'ignore'
-			}
-		)
-
-		// Move file
-		fs.renameSync(
-			path.resolve(downloadDir, item.dest  + '.tar'+TEMP_TOKEN, 'build', 'stage', 'module.tar.gz'),
-			path.resolve(uploadDir, item.newName)
-		)
-
-		console.log('compressItem - end', item.newName)
-		resolve(item)
-	})
-}
-var copyItem = function(item) {
-	return new Promise(function (resolve, reject) {
-		var src = path.resolve(downloadDir, item.dest)
-		var dest =  path.resolve(uploadDir, item.newName)
-		console.log('copy - start', src, dest)
-
-		var inp = fs.createReadStream(src)
-		inp.on('error', reject)
-		var out = fs.createWriteStream(dest)
-		out.on('finish', function () {
-			console.log('copy - end', src, dest)
-			resolve(item)
-		})
-		inp.pipe(out)
-	})
-}
-var uploadItem = function(item) {
-	return new Promise(function (resolve, reject) {
-		upload(path.resolve(uploadDir,item.newName), item.basename +'/' + item.newName)
-		.then(function () {
-			resolve(item)
-		})
-		.catch(reject)
-	})
-}
 var processList = function(list) {
 	var promises = list.map(function(item) {
 		return processItem(item)
@@ -411,12 +278,16 @@ var extractToolsFromPackage = function (toolsNames) {
 				})
 			}
 			if(tools){
-				resolve(tools)
+				//resolve(tools)
 				// Only the latest
-				/*if(tools.length){
-					resolve([tools[tools.length-1]])
+				if(tools.length){
+					resolve(tools.filter(function(value, index){
+						if(index < LIMIT) return true
+					}))
 				}
-				resolve([])*/
+				else {
+					resolve([])
+				}
 			}
 			else{
 				reject('Could not extract tool')
@@ -433,14 +304,13 @@ var extractFlatListFromTools = function (hostMap) {
 				var toolName = tool.name
 				var toolVersion = tool.version
 
-				Object.keys(hostMap).forEach(function(plaform){
-					Object.keys(hostMap[plaform]).forEach(function(arch){
-						var token = findOneObjectByKey(tool.systems, 'host', hostMap[plaform][arch])
+				Object.keys(hostMap).forEach(function(platform){
+					Object.keys(hostMap[platform]).forEach(function(arch){
+						var token = findOneObjectByKey(tool.systems, 'host', hostMap[platform][arch])
 						flatList.push({
 							url: token.url,
-							dest: token.archiveFileName,
-							basename: toolName.replace(/-/g, '_'),
-							newName: [toolName.replace(/-/g, '_'), toolVersion, plaform, arch].join('-') + '.tar.gz',
+							dst: token.archiveFileName,
+							newName: path.join(`${toolName}-${toolVersion}`, `${platform}-${arch}`),
 							toolName: toolName,
 							toolVersion: toolVersion
 						})
@@ -458,10 +328,9 @@ var extractLatestTagsFromReleases = function(rawReleases) {
 			var releases = JSON.parse(rawReleases)
 			.map(function(item){
 				return item['tag_name']
+			}).filter(function(tag, index){
+				if(index < LIMIT) return true
 			})
-			/*.filter(function(tag, index){
-				if(index < 1) return true
-			})*/
 			resolve(releases)
 		}
 		catch (e){
@@ -475,14 +344,13 @@ var extractFlatListFromTags = function (hostMap) {
 		return new Promise(function(resolve){
 			var flatList = []
 			versions.forEach(function (version) {
-				Object.keys(hostMap).forEach(function(plaform){
-					Object.keys(hostMap[plaform]).forEach(function(arch){
-						var filename = 'arduino-builder-' + hostMap[plaform][arch].slug + '-' + version + '.' + hostMap[plaform][arch].ext
+				Object.keys(hostMap).forEach(function(platform){
+					Object.keys(hostMap[platform]).forEach(function(arch){
+						var filename = 'arduino-builder-' + hostMap[platform][arch].slug + '-' + version + '.' + hostMap[platform][arch].ext
 						flatList.push({
 							url: 'http://downloads.arduino.cc/tools/' + filename,
-							dest: filename,
-							basename: 'arduino_builder',
-							newName: ['arduino_builder', version, plaform, arch].join('-') + '.tar.gz'
+							dst: filename,
+							newName: path.join(`arduino-builder-${version}`, `${platform}-${arch}`)
 						})
 					})
 				})
@@ -511,25 +379,7 @@ var getDeep = function(object, path){
 		return
 	}
 }
-var findIndexesByKey = function(list, path, value) {
-	var result = []
-	if(!list || !list.length){
-		return result
-	}
 
-	for (var i = 0; i < list.length; i++) {
-		if(getDeep(list[i], path) === value){
-			result.push(i)
-		}
-	}
-	return result
-}
-var findObjectsByKey = function(list, path, value) {
-	var indexes = findIndexesByKey(list, path, value)
-	return	indexes.map(function(index){
-		return list[index]
-	})
-}
 var findOneIndexByKey = function(list, path, value) {
 	if(!list || !list.length){
 		return -1
@@ -552,16 +402,9 @@ var findOneObjectByKey = function(list, path, value) {
 
 exports.pass = pass
 exports.get = get
-exports.download = download
-exports.upload = upload
-exports.extractTarBz2 = extractTarBz2
-exports.extractTarZip = extractTarZip
 
 exports.clear = clear
-exports.processItem = processItem
-exports.downloadItem = downloadItem
-exports.extractItem = extractItem
-exports.compressItem = compressItem
+exports.clearAll = clearAll
 exports.processList = processList
 
 exports.extractToolsFromPackage = extractToolsFromPackage
@@ -570,8 +413,3 @@ exports.extractFlatListFromTools = extractFlatListFromTools
 exports.extractLatestTagsFromReleases = extractLatestTagsFromReleases
 exports.extractFlatListFromTags = extractFlatListFromTags
 
-exports.getDeep = getDeep
-exports.findIndexesByKey = findIndexesByKey
-exports.findObjectsByKey = findObjectsByKey
-exports.findOneIndexByKey = findOneIndexByKey
-exports.findOneObjectByKey = findOneObjectByKey
