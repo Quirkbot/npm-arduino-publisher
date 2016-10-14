@@ -203,6 +203,7 @@ var processItem = function(item) {
 		})
 		.then(downloadItem)
 		.then(extractItem)
+		.then(cloneItem)
 		.then(item => {
 			console.log('SUCCESS:', item.newName)
 			return item
@@ -249,12 +250,36 @@ var extractItem = function(item) {
 
 	})
 }
+var cloneItem = function(item) {
+	return new Promise(function (resolve) {
+		// This helps with the linking problem when publishing to npm
+
+		const src = path.join(DIST, item.newName)
+		const tmp = path.join(DIST, `${item.newName}tmp`)
+
+		require('child_process').execSync(
+			`cp -r ${src} ${tmp} && rm -r ${src} && mv ${tmp} ${src}`
+		)
+
+		resolve(item)
+	})
+}
+var fixSymlinks = function() {
+	return new Promise(function (resolve) {
+		console.log('Fixing symlinks...')
+		require('child_process').execSync('sh fixsymlinks.sh')
+		console.log('Fixed!')
+		resolve()
+	})
+}
+
 
 var processList = function(list) {
 	var promises = list.map(function(item) {
 		return processItem(item)
 	})
 	return Promise.all(promises)
+	.then(fixSymlinks)
 }
 
 var extractToolsFromPackage = function (toolsNames) {

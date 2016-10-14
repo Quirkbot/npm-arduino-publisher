@@ -17,7 +17,7 @@
     "eslint-plugin-standard": "^2.0.0"
   },
   "scripts": {
-      "start": "index.js"
+      "start": "node index.js"
   }
 
 }

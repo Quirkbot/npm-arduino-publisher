@@ -59,7 +59,7 @@ case 'arduino-builder':
 	.then(utils.extractLatestTagsFromReleases)
 	.then(utils.extractFlatListFromTags(hostMapArduinoBuilder))
 	.then(utils.processList)
-	//.then(utils.clear)
+	.then(utils.clear)
 	.catch(function (error) {
 		console.log('error', error)
 	})
