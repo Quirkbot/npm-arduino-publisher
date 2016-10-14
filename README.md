@@ -1,33 +1,35 @@
 # npm-arduino-publisher
 
-This very simple tool will download the binaries distributed by Arduino, prepare and upload them to s3 so they can be used in a npm (node-pre-gyp) friendly format.
-
-It's currently being used by [npm-arduino-avr-gcc](https://github.com/Quirkbot/npm-arduino-avr-gcc) and [npm-arduino-builder](https://github.com/Quirkbot/npm-arduino-builder).
+A tool to download the binaries distributed by Arduino. The
+downloaded files will be placed the `./dist` directory, organized by platform
+and architecture.
 
 ## Usage
 
-There is only one command that can accept 1 argument. This argument controls which package will be mirrored.
+The script accepts 2 arguments:
+  1. Pacakge name: `avr-gcc`, `avrdude` or `arduino-builder`
+  2. Number of releases to fetch: defaults to `1` (only the latest release)
 
-#### `avr-gcc`
+
+### Examples
+
+#### Download the latest release of AVR GCC
 ```
-node index.js avr-gcc
-```
-#### `avrdude`
-```
-node index.js avrdude
-```
-#### `arduino-builder`
-```
-node index.js arduino-builder
+npm start avr-gcc
 ```
 
-### Environment variables
-
-There are 3 required environment variables `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` and `S3_BUCKET`, that will control where the binaries will get uploaded to.
-
-You can set the environment variables directly from the command line, right before you invoke the script:
-
+#### Download the latest 4 releases of Avrdude
 ```
-S3_ACCESS_KEY_ID="XXXXXXXXX" S3_SECRET_ACCESS_KEY="XXXXXXXXX" S3_BUCKET="npm-arduino" node index.js avr-gcc
+npm start avrdude 4
 ```
 
+#### Download the latest release of Arduino Builder
+```
+npm start arduino-builder 1
+```
+
+This has the same effect of running:
+
+```
+npm start arduino-builder
+```
