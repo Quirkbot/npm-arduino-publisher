@@ -1,5 +1,6 @@
 {
-  "name": "arduino-to-npm",
+  "name": "npm-arduino-publisher",
+  "version": "0.0.5",
   "dependencies": {
     "fs-extra": "^0.30.0",
     "mt-files-downloader": "^0.2.5",
