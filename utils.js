@@ -307,7 +307,7 @@ var extractToolsFromPackage = function (toolsNames) {
 				// Only the latest
 				if(tools.length){
 					resolve(tools.filter(function(value, index){
-						if(index < LIMIT) return true
+						if(index >= (tools.length - LIMIT)) return true
 					}))
 				}
 				else {
