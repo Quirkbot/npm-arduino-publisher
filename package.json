@@ -2,23 +2,24 @@
   "name": "npm-arduino-publisher",
   "version": "0.0.5",
   "dependencies": {
-    "fs-extra": "^0.30.0",
+    "fs-extra": "^7.0.0",
     "mt-files-downloader": "^0.2.5",
-    "node-pre-gyp": "^0.6.30",
-    "request": "^2.65.0",
-    "s3": "^4.4.0",
+    "node-fetch": "^2.2.0",
     "seek-bzip": "^1.0.5",
-    "tar": "^2.2.1",
+    "tar": "^4.4.6",
     "unzip": "^0.1.11"
   },
   "devDependencies": {
-    "eslint": "^3.4.0",
-    "eslint-config-standard": "^6.0.0",
-    "eslint-plugin-promise": "^2.0.1",
-    "eslint-plugin-standard": "^2.0.0"
+    "babel-eslint": "^10.0.1",
+    "eslint": "^5.6.1",
+    "eslint-config-airbnb": "^17.0.0",
+    "eslint-config-airbnb-base": "^13.0.0",
+    "eslint-import-resolver-babel-module": "^5.0.0-beta.0",
+    "eslint-plugin-import": "^2.13.0",
+    "eslint-plugin-jsx-a11y": "^6.1.1",
+    "eslint-plugin-react": "^7.10.0"
   },
   "scripts": {
-      "start": "node index.js"
+    "start": "node index.js"
   }
-
 }
