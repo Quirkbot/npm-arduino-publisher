@@ -1,8 +1,7 @@
 {
   "name": "npm-arduino-publisher",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "dependencies": {
-    "fs-extra": "^7.0.0",
     "mt-files-downloader": "^0.2.5",
     "node-fetch": "^2.2.0",
     "seek-bzip": "^1.0.5",
@@ -11,7 +10,7 @@
   },
   "devDependencies": {
     "babel-eslint": "^10.0.1",
-    "eslint": "^5.6.1",
+    "eslint": "^5.8.0",
     "eslint-config-airbnb": "^17.0.0",
     "eslint-config-airbnb-base": "^13.0.0",
     "eslint-import-resolver-babel-module": "^5.0.0-beta.0",
@@ -20,6 +19,9 @@
     "eslint-plugin-react": "^7.10.0"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "arduino-builder": "node index.js arduino-builder",
+    "avr-gcc": "node index.js avr-gcc",
+    "all": "node index.js arduino-builder && node index.js avr-gcc"
   }
 }

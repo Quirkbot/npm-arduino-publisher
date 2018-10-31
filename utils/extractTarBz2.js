@@ -1,19 +1,22 @@
 const fs = require('fs')
-const fsp = require('fs').promises
 const path = require('path')
 const Bunzip = require('seek-bzip')
 const tar = require('tar')
+const rimraf = require('./rimraf')
 
 module.exports = async (src, dst, item) => {
-	// Uncompress
-	const compressedData = await fsp.readFile(src)
-	const data = Bunzip.decode(compressedData)
-	await fsp.writeFile(`${src}.temp.tar`, data)
+	await rimraf(dst)
+	await fs.promises.mkdir(path.resolve(dst, 'tools'), { recursive : true })
 
-	return new Promise((resolve, reject) => {
+	// Uncompress
+	const compressedData = await fs.promises.readFile(src)
+	const data = Bunzip.decode(compressedData)
+	await fs.promises.writeFile(`${src}.temp.tar`, data)
+
+	await new Promise((resolve, reject) => {
 		// Untar
 		const extractor = tar.extract({
-			path  : path.resolve(dst, 'tools'),
+			cwd   : path.resolve(dst, 'tools'),
 			strip : 0
 		})
 		extractor.on('error', reject)
@@ -21,8 +24,8 @@ module.exports = async (src, dst, item) => {
 			if (item.toolName) {
 				try {
 					// Write the builtin_tools_versions.txt
-					await fsp.access(path.resolve(dst, 'tools', 'avr'), fs.F_OK)
-					await fsp.writeFile(
+					await fs.promises.access(path.resolve(dst, 'tools', 'avr'), fs.F_OK)
+					await fs.promises.writeFile(
 						path.resolve(dst, 'tools', 'avr', 'builtin_tools_versions.txt'),
 						`arduino.${item.toolName}=${item.toolVersion}`
 					)
