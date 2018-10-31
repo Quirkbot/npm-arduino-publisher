@@ -6,30 +6,22 @@ and architecture.
 
 ## Usage
 
-The script accepts 2 arguments:
-  1. Pacakge name: `avr-gcc`, `avrdude` or `arduino-builder`
-  2. Number of releases to fetch: defaults to `1` (only the latest release)
-
-
-### Examples
+#### Download the latest release of AVR GCC, Avrdude and Arduino Builder
+```
+yarn all
+```
 
 #### Download the latest release of AVR GCC
 ```
-npm start avr-gcc
+yarn avr-gcc
 ```
 
-#### Download the latest 4 releases of Avrdude
+#### Download the latest of Avrdude
 ```
-npm start avrdude 4
+yarn avrdude
 ```
 
 #### Download the latest release of Arduino Builder
 ```
-npm start arduino-builder 1
-```
-
-This has the same effect of running:
-
-```
-npm start arduino-builder
+yarn arduino-builder 1
 ```
